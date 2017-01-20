@@ -10,6 +10,7 @@ import java.util.Date;
 public abstract class Tweet implements Tweetable{
     private Date date;
     private String message;
+    private ArrayList<Mood> moodList;
     //private String hiddenString
 
     public Date getDate() {
@@ -41,5 +42,13 @@ public abstract class Tweet implements Tweetable{
         } else {
             this.message = message;
         }
+    }
+
+    public ArrayList<Mood> getMoodList() {
+        return moodList;
+    }
+
+    public void setMoodList(ArrayList<Mood> moodList) {
+        this.moodList = moodList;
     }
 }
