@@ -1,11 +1,14 @@
 package ca.ualberta.cs.lonelytwitter;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -18,11 +21,18 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 public class LonelyTwitterActivity extends Activity {
 
 	private static final String FILENAME = "file.sav";
 	private EditText bodyText;
 	private ListView oldTweetsList;
+
+	private ArrayAdapter<Tweet> adapter;
+	private ArrayList<Tweet> tweetList;
+	private ArrayList<Tweet> tweets;
 	
 	/** Called when the activity is first created. */
 	@Override
@@ -56,8 +66,19 @@ public class LonelyTwitterActivity extends Activity {
 			public void onClick(View v) {
 				setResult(RESULT_OK);
 				String text = bodyText.getText().toString();
-				saveInFile(text, new Date(System.currentTimeMillis()));
-				finish();
+
+				Tweet tweet = null;
+				try {
+					tweet = new NormalTweet(text);
+				} catch (TweetTooLongException e) {
+					e.printStackTrace();
+				}
+
+				tweetList.add(tweet);
+
+				adapter.notifyDataSetChanged();
+				saveInFile();
+//				finish();
 
 			}
 		});
@@ -67,46 +88,52 @@ public class LonelyTwitterActivity extends Activity {
 	protected void onStart() {
 		// TODO Auto-generated method stub
 		super.onStart();
-		String[] tweets = loadFromFile();
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-				R.layout.list_item, tweets);
+
+		loadFromFile();
+
+		adapter = new ArrayAdapter<Tweet>(this,
+				R.layout.list_item, tweetList);
 		oldTweetsList.setAdapter(adapter);
 	}
 
-	private String[] loadFromFile() {
-		ArrayList<String> tweets = new ArrayList<String>();
+	private void loadFromFile() {
 		try {
 			FileInputStream fis = openFileInput(FILENAME);
 			BufferedReader in = new BufferedReader(new InputStreamReader(fis));
-			String line = in.readLine();
-			while (line != null) {
-				tweets.add(line);
-				line = in.readLine();
-			}
+
+			Gson gson = new Gson();
+
+			//taken from https://stackoverflow.com/questios/12384064/gson-convert-from-json-to-a-type-arraylist
+			//2017-01-24 18:19
+			Type listType = new TypeToken<ArrayList<NormalTweet>>(){}.getType();
+			tweetList = gson.fromJson(in, listType);
 
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// TODO properly handle exception
+			tweetList = new ArrayList<Tweet>();
+			//hassathrow new RuntimeException();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new RuntimeException();
 		}
-		return tweets.toArray(new String[tweets.size()]);
 	}
 	
-	private void saveInFile(String text, Date date) {
+	private void saveInFile() {
 		try {
 			FileOutputStream fos = openFileOutput(FILENAME,
-					Context.MODE_APPEND);
-			fos.write(new String(date.toString() + " | " + text)
-					.getBytes());
+					Context.MODE_PRIVATE);
+
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(fos));
+
+			Gson gson = new Gson();
+			gson.toJson(tweetList, out);
+			out.flush();
+
 			fos.close();
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// TODO: Handle Exception properly
+			throw new RuntimeException();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new RuntimeException();
 		}
 	}
 }
