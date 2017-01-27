@@ -2,6 +2,7 @@ package ca.ualberta.cs.lonelytwitter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -30,9 +31,8 @@ public class LonelyTwitterActivity extends Activity {
 	private EditText bodyText;
 	private ListView oldTweetsList;
 
-	private ArrayAdapter<Tweet> adapter;
 	private ArrayList<Tweet> tweetList;
-	private ArrayList<Tweet> tweets;
+    private ArrayAdapter<Tweet> adapter;
 	
 	/** Called when the activity is first created. */
 	@Override
@@ -42,24 +42,8 @@ public class LonelyTwitterActivity extends Activity {
 
 		bodyText = (EditText) findViewById(R.id.body);
 		Button saveButton = (Button) findViewById(R.id.save);
+		Button clearButton = (Button) findViewById(R.id.clear);
 		oldTweetsList = (ListView) findViewById(R.id.oldTweetsList);
-
-
-		try {
-			Tweet tweet = new NormalTweet("First tweet");
-			tweet.setMessage("kasdfskasfdakj");
-			ImportantTweet importantTweet = new ImportantTweet("very important");
-			importantTweet.getDate();
-            NormalTweet normalTweet = new NormalTweet("im normal");
-
-            ArrayList<Tweet> arrayList = new ArrayList<Tweet>();
-            arrayList.add(tweet);
-            arrayList.add(importantTweet);
-            arrayList.add(normalTweet);
-
-		} catch (TweetTooLongException e) {
-			e.printStackTrace();
-		}
 
 		saveButton.setOnClickListener(new View.OnClickListener() {
 
@@ -67,21 +51,29 @@ public class LonelyTwitterActivity extends Activity {
 				setResult(RESULT_OK);
 				String text = bodyText.getText().toString();
 
-				Tweet tweet = null;
-				try {
-					tweet = new NormalTweet(text);
-				} catch (TweetTooLongException e) {
-					e.printStackTrace();
-				}
+				Tweet tweet = new NormalTweet(text);
+                tweetList.add(tweet);
 
-				tweetList.add(tweet);
+                adapter.notifyDataSetChanged();
 
-				adapter.notifyDataSetChanged();
-				saveInFile();
-//				finish();
+                saveInFile();
 
 			}
 		});
+		
+		clearButton.setOnClickListener(new View.OnClickListener() {
+
+			public void onClick(View v) {
+				setResult(RESULT_OK);
+					
+				deleteFile(FILENAME);
+               	tweetList.clear();
+
+				adapter.notifyDataSetChanged();
+
+			}
+		});
+		
 	}
 
 	@Override
@@ -101,17 +93,15 @@ public class LonelyTwitterActivity extends Activity {
 			FileInputStream fis = openFileInput(FILENAME);
 			BufferedReader in = new BufferedReader(new InputStreamReader(fis));
 
-			Gson gson = new Gson();
+            Gson gson = new Gson();
 
-			//taken from https://stackoverflow.com/questios/12384064/gson-convert-from-json-to-a-type-arraylist
-			//2017-01-24 18:19
-			Type listType = new TypeToken<ArrayList<NormalTweet>>(){}.getType();
-			tweetList = gson.fromJson(in, listType);
+            //Taken from http://stackoverflow.com/questions/12384064/gson-convert-from-json-to-a-typed-arraylistt
+            // 2017-01-24 18:19
+            Type listType = new TypeToken<ArrayList<NormalTweet>>(){}.getType();
+            tweetList = gson.fromJson(in, listType);
 
 		} catch (FileNotFoundException e) {
-			// TODO properly handle exception
-			tweetList = new ArrayList<Tweet>();
-			//hassathrow new RuntimeException();
+            tweetList = new ArrayList<Tweet>();
 		} catch (IOException e) {
 			throw new RuntimeException();
 		}
@@ -121,16 +111,15 @@ public class LonelyTwitterActivity extends Activity {
 		try {
 			FileOutputStream fos = openFileOutput(FILENAME,
 					Context.MODE_PRIVATE);
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(fos));
 
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(fos));
-
-			Gson gson = new Gson();
-			gson.toJson(tweetList, out);
-			out.flush();
+            Gson gson = new Gson();
+            gson.toJson(tweetList, out);
+            out.flush();
 
 			fos.close();
 		} catch (FileNotFoundException e) {
-			// TODO: Handle Exception properly
+            // TODO: Handle the Exception properly later
 			throw new RuntimeException();
 		} catch (IOException e) {
 			throw new RuntimeException();
